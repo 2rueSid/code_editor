@@ -1,6 +1,5 @@
 use std::io::{self, Write};
 use termion::raw::RawTerminal;
-use termion::scroll;
 
 pub struct Cursor {
     pub x: u16,

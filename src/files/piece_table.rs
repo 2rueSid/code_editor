@@ -87,4 +87,20 @@ impl PieceTable {
             }
         }
     }
+
+    pub fn prev_line(&self, segment: &mut VecDeque<SegmentNode>) {
+        if let Some(first_node) = segment.front() {
+            if first_node.line_number <= 1 {
+                return;
+            }
+            if let Some(prev_line) = self
+                .get_lines(first_node.line_number - 1, first_node.line_number - 1)
+                .front()
+                .cloned()
+            {
+                segment.pop_back();
+                segment.push_front(prev_line);
+            }
+        }
+    }
 }

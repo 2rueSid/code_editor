@@ -58,7 +58,14 @@ impl Buffer {
             lines.push_str(&line.value);
         }
         stdout.suspend_raw_mode().unwrap();
-        write!(stdout, "{}{}", clear::All, lines).unwrap();
+        write!(
+            stdout,
+            "{}{}{}",
+            clear::All,
+            termion::cursor::Goto(self.cursor.x, self.cursor.y),
+            lines
+        )
+        .unwrap();
         stdout.flush().unwrap();
         stdout.activate_raw_mode().unwrap();
     }
@@ -70,7 +77,11 @@ impl Buffer {
                 self.data.next_line(&mut self.segment);
                 self.display_segment(stdout);
             }
-            Motions::Up => self.cursor.move_up(stdout),
+            Motions::Up => {
+                self.cursor.move_up(stdout);
+                self.data.prev_line(&mut self.segment);
+                self.display_segment(stdout);
+            }
             Motions::Left => self.cursor.move_left(stdout),
             Motions::Right => self.cursor.move_right(stdout),
         }
