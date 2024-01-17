@@ -1,9 +1,9 @@
+use crate::files::buffer::Buffer;
+use crate::motion::Motions;
 use std::io::{self, Write};
 use termion::event::{Event, Key};
 use termion::input::TermRead;
 use termion::raw::RawTerminal;
-
-use crate::cursor::Cursor;
 
 pub enum EditorModes {
     Normal,
@@ -22,24 +22,26 @@ impl Editor {
 
     pub fn run(
         &mut self,
-        cursor: &mut Cursor,
+        buffer: &mut Buffer,
         stdin: io::Stdin,
         stdout: &mut RawTerminal<io::Stdout>,
     ) {
         let events = stdin.events();
+        stdout.flush().unwrap();
+
         for c in events {
             let evt = c.unwrap();
 
             match evt {
                 Event::Key(Key::Ctrl('q')) => break,
-                Event::Key(Key::Left) => cursor.move_left(stdout),
-                Event::Key(Key::Right) => cursor.move_right(stdout),
-                Event::Key(Key::Up) => cursor.move_up(stdout),
-                Event::Key(Key::Down) => cursor.move_down(stdout),
+                Event::Key(Key::Left) => buffer.motion(Motions::Left, stdout),
+                Event::Key(Key::Right) => buffer.motion(Motions::Right, stdout),
+                Event::Key(Key::Up) => buffer.motion(Motions::Up, stdout),
+                Event::Key(Key::Down) => buffer.motion(Motions::Down, stdout),
                 Event::Key(Key::Char('i')) => match self.mode {
                     EditorModes::Insert => {
                         write!(stdout, "{}i", termion::cursor::SteadyBar).unwrap();
-                        cursor.move_right(stdout);
+                        buffer.motion(Motions::Right, stdout);
                     }
                     EditorModes::Normal => {
                         self.mode = EditorModes::Insert;
@@ -53,6 +55,14 @@ impl Editor {
                 Event::Key(Key::Char(ch)) => {
                     if matches!(self.mode, EditorModes::Insert) {
                         write!(stdout, "{}", ch).unwrap();
+                    } else {
+                        match ch {
+                            'h' => buffer.motion(Motions::Left, stdout),
+                            'l' => buffer.motion(Motions::Right, stdout),
+                            'k' => buffer.motion(Motions::Up, stdout),
+                            'j' => buffer.motion(Motions::Down, stdout),
+                            _ => {}
+                        }
                     }
                 }
                 _ => {}
