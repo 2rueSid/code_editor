@@ -1,3 +1,4 @@
+use crate::files::buffer::SegmentNode;
 use std::collections::VecDeque;
 
 enum Source {
@@ -31,10 +32,10 @@ impl PieceTable {
         }
     }
 
-    pub fn get_lines(&self, from: usize, to: usize) -> VecDeque<String> {
+    pub fn get_lines(&self, from: usize, to: usize) -> VecDeque<SegmentNode> {
         let mut current_line = 1;
         let mut res = VecDeque::with_capacity(to - from + 1 as usize);
-        let mut curr_line = String::new();
+        let mut line_value = String::new();
 
         for piece in self.pieces.iter() {
             let segment = match piece.source {
@@ -44,13 +45,16 @@ impl PieceTable {
 
             for char in segment.chars() {
                 if current_line >= from && to >= current_line {
-                    curr_line.push(char);
+                    line_value.push(char);
                 }
 
                 if char == '\n' {
                     if current_line >= from && to >= current_line {
-                        res.push_back(curr_line.clone());
-                        curr_line.clear();
+                        res.push_back(SegmentNode {
+                            value: line_value.clone(),
+                            line_number: current_line,
+                        });
+                        line_value.clear();
                     }
                     current_line += 1;
                 }
@@ -61,10 +65,26 @@ impl PieceTable {
             }
         }
 
-        if !curr_line.is_empty() && current_line >= from && current_line <= to {
-            res.push_back(curr_line);
+        if !line_value.is_empty() && current_line >= from && current_line <= to {
+            res.push_back(SegmentNode {
+                value: line_value.clone(),
+                line_number: current_line,
+            });
         }
 
         res
+    }
+
+    pub fn next_line(&self, segment: &mut VecDeque<SegmentNode>) {
+        if let Some(last_node) = segment.back() {
+            if let Some(next_line) = self
+                .get_lines(last_node.line_number + 1, last_node.line_number + 1)
+                .front()
+                .cloned()
+            {
+                segment.pop_front(); // Remove the first line
+                segment.push_back(next_line); // Add the new line at the end
+            }
+        }
     }
 }

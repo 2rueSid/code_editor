@@ -27,7 +27,7 @@ impl Editor {
         stdout: &mut RawTerminal<io::Stdout>,
     ) {
         let events = stdin.events();
-        stdout.flush().unwrap();
+        buffer.display_segment(stdout);
 
         for c in events {
             let evt = c.unwrap();

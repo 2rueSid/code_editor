@@ -4,16 +4,24 @@ use crate::motion::Motions;
 
 use std::collections::VecDeque;
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
+use termion::clear;
 use termion::raw::RawTerminal;
 
 use termion::terminal_size;
+
+#[derive(Clone)]
+pub struct SegmentNode {
+    pub value: String,
+    pub line_number: usize,
+}
+
 pub struct Buffer {
     file_path: std::path::PathBuf,
     pub data: PieceTable,
     pub lines: usize,
     pub cursor: Cursor,
-    pub segment: VecDeque<String>,
+    pub segment: VecDeque<SegmentNode>,
     terminal_size: (u16, u16),
 }
 
@@ -43,9 +51,25 @@ impl Buffer {
         }
     }
 
+    pub fn display_segment(&self, stdout: &mut RawTerminal<io::Stdout>) {
+        let mut lines = String::new();
+
+        for line in self.segment.iter() {
+            lines.push_str(&line.value);
+        }
+        stdout.suspend_raw_mode().unwrap();
+        write!(stdout, "{}{}", clear::All, lines).unwrap();
+        stdout.flush().unwrap();
+        stdout.activate_raw_mode().unwrap();
+    }
+
     pub fn motion(&mut self, motion: Motions, stdout: &mut RawTerminal<io::Stdout>) {
         match motion {
-            Motions::Down => self.cursor.move_down(stdout),
+            Motions::Down => {
+                self.cursor.move_down(stdout);
+                self.data.next_line(&mut self.segment);
+                self.display_segment(stdout);
+            }
             Motions::Up => self.cursor.move_up(stdout),
             Motions::Left => self.cursor.move_left(stdout),
             Motions::Right => self.cursor.move_right(stdout),
