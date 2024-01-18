@@ -41,7 +41,11 @@ impl Buffer {
             file_path,
             data: piece_table,
             lines: file.lines().count().clone(),
-            cursor: Cursor { x: 1, y: 1 },
+            cursor: Cursor {
+                x: 1,
+                relative_y: 1,
+                absolute_y: 1,
+            },
             terminal_size,
             segment: initial_segment,
             char_items: Vec::new(),
@@ -66,22 +70,20 @@ impl Buffer {
     pub fn motion(&mut self, motion: Motions, stdout: &mut RawTerminal<io::Stdout>) {
         match motion {
             Motions::Down => {
-                if self.cursor.y + 1 >= self.terminal_size.1 {
+                if self.cursor.relative_y + 1 >= self.terminal_size.1 {
                     self.data.next_line(&mut self.segment);
                     self.display_segment(stdout);
-                } else {
-                    self.cursor.move_down(self.terminal_size.1);
                 }
+                self.cursor.move_down(self.terminal_size.1);
             }
             Motions::Up => {
-                if usize::from(self.cursor.y) > 1 {
-                    self.cursor.move_up();
-                }
-
                 let ln = self.segment.front().unwrap().line_number;
-                if usize::from(self.cursor.y) == ln {
+                if usize::from(self.cursor.absolute_y) < ln {
                     self.data.prev_line(&mut self.segment);
                     self.display_segment(stdout);
+                }
+                if self.cursor.absolute_y as i16 - 1 >= 1 {
+                    self.cursor.move_up();
                 }
             }
             Motions::Left => self.cursor.move_left(),
@@ -91,7 +93,7 @@ impl Buffer {
         write!(
             stdout,
             "{}",
-            termion::cursor::Goto(self.cursor.x, self.cursor.y)
+            termion::cursor::Goto(self.cursor.x, self.cursor.relative_y)
         )
         .unwrap();
         stdout.flush().unwrap();
