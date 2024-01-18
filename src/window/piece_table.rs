@@ -1,4 +1,4 @@
-use crate::files::buffer::SegmentNode;
+use crate::window::buffer::SegmentNode;
 use std::collections::VecDeque;
 
 enum Source {

@@ -1,5 +1,5 @@
-use crate::files::buffer::Buffer;
 use crate::motion::Motions;
+use crate::window::buffer::Buffer;
 use std::io::{self, Write};
 use termion::event::{Event, Key};
 use termion::input::TermRead;

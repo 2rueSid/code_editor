@@ -3,8 +3,8 @@ use std::io;
 use termion::raw::IntoRawMode;
 
 mod editor;
-mod files;
 mod motion;
+mod window;
 
 fn main() {
     let path_arg = args().nth(1);

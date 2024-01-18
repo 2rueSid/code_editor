@@ -1,6 +1,6 @@
-use crate::files::cursor::Cursor;
-use crate::files::piece_table::PieceTable;
 use crate::motion::Motions;
+use crate::window::cursor::Cursor;
+use crate::window::piece_table::PieceTable;
 
 use std::collections::VecDeque;
 use std::fs::File;
