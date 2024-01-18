@@ -9,6 +9,7 @@ pub enum EditorModes {
     Normal,
     Insert,
 }
+
 pub struct Editor {
     mode: EditorModes,
 }
@@ -22,11 +23,12 @@ impl Editor {
 
     pub fn run(
         &mut self,
-        buffer: &mut Buffer,
+        path: Option<String>,
         stdin: io::Stdin,
         stdout: &mut RawTerminal<io::Stdout>,
     ) {
         let events = stdin.events();
+        let mut buffer = Buffer::new(path);
         buffer.display_segment(stdout);
 
         for c in events {

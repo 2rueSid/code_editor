@@ -58,14 +58,7 @@ impl Buffer {
             lines.push_str(&line.value);
         }
         stdout.suspend_raw_mode().unwrap();
-        write!(
-            stdout,
-            "{}{}{}",
-            clear::All,
-            termion::cursor::Goto(self.cursor.x, self.cursor.y),
-            lines
-        )
-        .unwrap();
+        write!(stdout, "{}{}", clear::All, lines,).unwrap();
         stdout.flush().unwrap();
         stdout.activate_raw_mode().unwrap();
     }
@@ -73,18 +66,35 @@ impl Buffer {
     pub fn motion(&mut self, motion: Motions, stdout: &mut RawTerminal<io::Stdout>) {
         match motion {
             Motions::Down => {
-                self.cursor.move_down(stdout);
-                self.data.next_line(&mut self.segment);
-                self.display_segment(stdout);
+                if self.cursor.y + 1 >= self.terminal_size.1 {
+                    self.data.next_line(&mut self.segment);
+                    self.display_segment(stdout);
+                } else {
+                    self.cursor.move_down(self.terminal_size.1);
+                }
             }
             Motions::Up => {
-                self.cursor.move_up(stdout);
-                self.data.prev_line(&mut self.segment);
-                self.display_segment(stdout);
+                if usize::from(self.cursor.y) > 1 {
+                    self.cursor.move_up();
+                }
+
+                let ln = self.segment.front().unwrap().line_number;
+                if usize::from(self.cursor.y) == ln {
+                    self.data.prev_line(&mut self.segment);
+                    self.display_segment(stdout);
+                }
             }
-            Motions::Left => self.cursor.move_left(stdout),
-            Motions::Right => self.cursor.move_right(stdout),
+            Motions::Left => self.cursor.move_left(),
+            Motions::Right => self.cursor.move_right(),
         }
+
+        write!(
+            stdout,
+            "{}",
+            termion::cursor::Goto(self.cursor.x, self.cursor.y)
+        )
+        .unwrap();
+        stdout.flush().unwrap();
     }
 }
 

@@ -32,6 +32,10 @@ impl PieceTable {
         }
     }
 
+    pub fn delete(&self) {}
+    pub fn insert(&self) {}
+    pub fn item_at(&self) {}
+
     pub fn get_lines(&self, from: usize, to: usize) -> VecDeque<SegmentNode> {
         let mut current_line = 1;
         let mut res = VecDeque::with_capacity(to - from + 1 as usize);
