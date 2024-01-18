@@ -1,20 +1,15 @@
 use crate::motion::Motions;
 use crate::window::cursor::Cursor;
 use crate::window::piece_table::PieceTable;
+use crate::window::segment::SegmentNode;
 
 use std::collections::VecDeque;
 use std::fs::File;
 use std::io::{self, Read, Write};
-use termion::clear;
 use termion::raw::RawTerminal;
+use termion::{clear, cursor};
 
 use termion::terminal_size;
-
-#[derive(Clone)]
-pub struct SegmentNode {
-    pub value: String,
-    pub line_number: usize,
-}
 
 pub struct Buffer {
     file_path: std::path::PathBuf,
@@ -23,6 +18,7 @@ pub struct Buffer {
     pub cursor: Cursor,
     pub segment: VecDeque<SegmentNode>,
     terminal_size: (u16, u16),
+    char_items: Vec<char>,
 }
 
 impl Buffer {
@@ -48,6 +44,7 @@ impl Buffer {
             cursor: Cursor { x: 1, y: 1 },
             terminal_size,
             segment: initial_segment,
+            char_items: Vec::new(),
         }
     }
 
@@ -57,9 +54,12 @@ impl Buffer {
         for line in self.segment.iter() {
             lines.push_str(&line.value);
         }
+
         stdout.suspend_raw_mode().unwrap();
         write!(stdout, "{}{}", clear::All, lines,).unwrap();
+
         stdout.flush().unwrap();
+
         stdout.activate_raw_mode().unwrap();
     }
 
@@ -96,6 +96,8 @@ impl Buffer {
         .unwrap();
         stdout.flush().unwrap();
     }
+
+    pub fn edit(&mut self, item: char, stdout: &mut RawTerminal<io::Stdout>) {}
 }
 
 fn file_content(path: &std::path::PathBuf) -> Result<String, io::Error> {

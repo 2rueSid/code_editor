@@ -1,6 +1,7 @@
-use crate::window::buffer::SegmentNode;
+use crate::window::segment::SegmentNode;
 use std::collections::VecDeque;
 
+#[derive(Clone)]
 enum Source {
     Original,
     Add,
@@ -8,7 +9,7 @@ enum Source {
 
 struct Piece {
     source: Source,
-    start: usize,
+    offset: usize,
     length: usize,
 }
 
@@ -23,7 +24,7 @@ impl PieceTable {
         let pieces = vec![Piece {
             source: Source::Original,
             length: buffer.len(),
-            start: 0,
+            offset: 0,
         }];
         PieceTable {
             original: buffer.to_string(),
@@ -32,22 +33,97 @@ impl PieceTable {
         }
     }
 
-    pub fn delete(&self) {}
-    pub fn insert(&self) {}
-    pub fn item_at(&self) {}
+    /// create 3 pieces
+    /// 1 - points to items before line
+    /// 3 - poinst to items after line
+    /// 2 - points to items in Add buffer
+    /// append items to the Add buffer
+    /// remove old piece
+    /// to get offset we can store offset and length of the segment node
+    /// if we have the offset we can then just make a simple calculations to get the offset
+    /// parameter.
+    pub fn insert(&mut self, items: String, offset: usize) {
+        if items.is_empty() {
+            return;
+        }
 
+        let mut found = false;
+        let mut new_pieces: Vec<Piece> = Vec::new();
+        let mut found_idx = 0;
+
+        for (i, piece) in self.pieces.iter().enumerate() {
+            let is_within = piece.offset <= offset && offset < piece.offset + piece.length;
+
+            if !is_within {
+                continue;
+            }
+
+            found = true;
+            found_idx = i;
+
+            if offset > piece.offset {
+                let before_piece = Piece {
+                    source: Source::Original,
+                    length: offset - piece.offset,
+                    offset: piece.offset,
+                };
+
+                new_pieces.push(before_piece);
+            }
+
+            let new_piece = Piece {
+                offset: self.add.len(),
+                length: items.len(),
+                source: Source::Add,
+            };
+
+            new_pieces.push(new_piece);
+            self.add.push_str(&items);
+            if offset < piece.offset + piece.length {
+                let after_piece = Piece {
+                    source: piece.source.clone(),
+                    offset,
+                    length: piece.offset + piece.length - offset,
+                };
+                new_pieces.push(after_piece);
+            }
+
+            break;
+        }
+
+        if found {
+            self.pieces.splice(found_idx..=found_idx, new_pieces);
+        } else if offset == self.original.len() + self.add.len() {
+            let add_offset = self.add.len();
+            self.add.push_str(&items);
+            let new_piece = Piece {
+                source: Source::Add,
+                offset: add_offset,
+                length: items.len(),
+            };
+            self.pieces.push(new_piece);
+        }
+    }
+
+    /// creates a ring buffer, and iterates over pieces and it's content.
+    /// in content search for the lines, if the item is equal to \n and a current line is within
+    /// from-to range append it to the ring buffer.
+    /// if last line is not empty and it's withing range but it may not include \n push it to the
+    /// res as well.
     pub fn get_lines(&self, from: usize, to: usize) -> VecDeque<SegmentNode> {
         let mut current_line = 1;
         let mut res = VecDeque::with_capacity(to - from + 1 as usize);
         let mut line_value = String::new();
+        let mut current_offset = 0;
 
         for piece in self.pieces.iter() {
             let segment = match piece.source {
-                Source::Original => &self.original[piece.start..piece.start + piece.length],
-                Source::Add => &self.add[piece.start..piece.start + piece.length],
+                Source::Original => &self.original[piece.offset..piece.offset + piece.length],
+                Source::Add => &self.add[piece.offset..piece.offset + piece.length],
             };
 
             for char in segment.chars() {
+                current_offset += char.len_utf8();
                 if current_line >= from && to >= current_line {
                     line_value.push(char);
                 }
@@ -57,6 +133,7 @@ impl PieceTable {
                         res.push_back(SegmentNode {
                             value: line_value.clone(),
                             line_number: current_line,
+                            offset: current_offset,
                         });
                         line_value.clear();
                     }
@@ -73,6 +150,7 @@ impl PieceTable {
             res.push_back(SegmentNode {
                 value: line_value.clone(),
                 line_number: current_line,
+                offset: current_offset,
             });
         }
 
