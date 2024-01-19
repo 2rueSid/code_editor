@@ -90,16 +90,29 @@ impl Buffer {
             Motions::Right => self.cursor.move_right(),
         }
 
+        self.display_cursor(stdout);
+    }
+
+    pub fn edit(&mut self, item: char, stdout: &mut RawTerminal<io::Stdout>) {}
+
+    fn display_cursor(&self, stdout: &mut RawTerminal<io::Stdout>) {
+        let cursor_position_str = format!("x: {} y: {}", self.cursor.x, self.cursor.absolute_y);
+        let offset = cursor_position_str.len();
+        let x = self.terminal_size.0 - offset as u16;
+        let y = self.terminal_size.1 - 1;
+        stdout.suspend_raw_mode().unwrap();
         write!(
             stdout,
-            "{}",
+            "{}{}{}{}",
+            termion::cursor::Goto(x, y),
+            clear::CurrentLine,
+            cursor_position_str,
             termion::cursor::Goto(self.cursor.x, self.cursor.relative_y)
         )
         .unwrap();
         stdout.flush().unwrap();
+        stdout.activate_raw_mode().unwrap();
     }
-
-    pub fn edit(&mut self, item: char, stdout: &mut RawTerminal<io::Stdout>) {}
 }
 
 fn file_content(path: &std::path::PathBuf) -> Result<String, io::Error> {
