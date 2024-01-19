@@ -129,7 +129,39 @@ impl Buffer {
         // handle changes in line
         match item {
             codes::BACKSPACE => {
-                self.buffered_line.remove(usize::from(self.cursor.x - 1));
+                if self.cursor.absolute_y == 1 && self.cursor.x == 1 {
+                    return;
+                }
+
+                if self.cursor.relative_y == 1 && self.cursor.x == 1 {
+                    // fetch new line here
+                    return;
+                }
+
+                if (self.cursor.x as i16 - 2) < 0 {
+                    // if x is less than 0, merge with line y - 1
+                    let prev_node = self
+                        .segment
+                        .get_line(usize::from(self.cursor.absolute_y - 1))
+                        .expect("should be valid line");
+
+                    // add last buffered line to the prev node
+                    let pn_value = prev_node.value.clone();
+
+                    self.cursor.x = pn_value.len() as u16;
+                    let pn_value = pn_value.replace("\n", &self.buffered_line);
+
+                    // set current buffered line as a value of prev node + prev buff line and clean
+                    // up prev buffered line
+                    self.buffered_line = pn_value;
+
+                    self.stdio.update_line(&String::from("\n"), &self.cursor);
+                    self.cursor.move_up();
+                    self.cursor.move_right();
+                    self.stdio.update_line(&self.buffered_line, &self.cursor);
+                    return;
+                }
+                self.buffered_line.remove(usize::from(self.cursor.x - 2));
                 self.stdio.debug_print(&self.buffered_line, 4, &self.cursor);
 
                 self.stdio.update_line(&self.buffered_line, &self.cursor);

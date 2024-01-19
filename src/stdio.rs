@@ -28,6 +28,11 @@ impl Stdio {
         self.stdout.flush().unwrap();
     }
 
+    pub fn update_cursor(&mut self, c: &Cursor) {
+        write!(self.stdout, "{}", termion::cursor::Goto(c.x, c.relative_y)).unwrap();
+        self.stdout.flush().unwrap();
+    }
+
     pub fn display_cursor(&mut self, c: &Cursor) {
         let cursor_position_str = format!("x: {} y: {}", c.x, c.absolute_y);
 
