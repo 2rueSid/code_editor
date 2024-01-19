@@ -6,8 +6,8 @@ use crate::window::segment::SegmentNode;
 use std::collections::VecDeque;
 use std::fs::File;
 use std::io::{self, Read, Write};
+use termion::clear;
 use termion::raw::RawTerminal;
-use termion::{clear, cursor};
 
 use termion::terminal_size;
 
@@ -93,7 +93,20 @@ impl Buffer {
         self.display_cursor(stdout);
     }
 
-    pub fn edit(&mut self, item: char, stdout: &mut RawTerminal<io::Stdout>) {}
+    pub fn edit(&mut self, item: char, stdout: &mut RawTerminal<io::Stdout>) {
+        // we have relative x and absolute y
+        // we need to go to the ring buffer and find exact line where we currently at
+        // each segment node in the buffer is one line in the editor
+        // so we can get the absolute_y iterate over buffer and find the exact line where we
+        // currently at
+
+        for node in self.segment.iter() {
+            if node.line_number == usize::from(self.cursor.absolute_y + 1) {
+                self.debug_print(stdout, node, 2);
+                self.debug_print(stdout, self.cursor.absolute_y, 3);
+            }
+        }
+    }
 
     fn display_cursor(&self, stdout: &mut RawTerminal<io::Stdout>) {
         let cursor_position_str = format!("x: {} y: {}", self.cursor.x, self.cursor.absolute_y);
@@ -107,6 +120,29 @@ impl Buffer {
             termion::cursor::Goto(x, y),
             clear::CurrentLine,
             cursor_position_str,
+            termion::cursor::Goto(self.cursor.x, self.cursor.relative_y)
+        )
+        .unwrap();
+        stdout.flush().unwrap();
+        stdout.activate_raw_mode().unwrap();
+    }
+
+    fn debug_print<T: std::fmt::Debug>(
+        &self,
+        stdout: &mut RawTerminal<io::Stdout>,
+        data: T,
+        y_offset: u16,
+    ) {
+        let str = format!("{:?}", data);
+        let x = 1;
+        let y = self.terminal_size.1 as i16 - y_offset as i16;
+        stdout.suspend_raw_mode().unwrap();
+        write!(
+            stdout,
+            "{}{}{}{}",
+            termion::cursor::Goto(x, y as u16),
+            clear::CurrentLine,
+            str,
             termion::cursor::Goto(self.cursor.x, self.cursor.relative_y)
         )
         .unwrap();

@@ -56,7 +56,7 @@ impl Editor {
                 }
                 Event::Key(Key::Char(ch)) => {
                     if matches!(self.mode, EditorModes::Insert) {
-                        write!(stdout, "{}", ch).unwrap();
+                        buffer.edit(ch, stdout);
                     } else {
                         match ch {
                             'h' => buffer.motion(Motions::Left, stdout),
