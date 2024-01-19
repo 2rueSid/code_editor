@@ -1,3 +1,4 @@
+use crate::codes;
 use crate::motion::Motions;
 use crate::window::buffer::Buffer;
 use std::io::{Stdin, Write};
@@ -47,6 +48,13 @@ impl Editor {
                 Event::Key(Key::Esc) => {
                     self.mode = EditorModes::Normal;
                     buffer.stdio.cursor_block();
+                }
+                Event::Key(Key::Backspace) => {
+                    if matches!(self.mode, EditorModes::Normal) {
+                        buffer.motion(Motions::Left)
+                    }
+
+                    buffer.edit(codes::BACKSPACE);
                 }
                 Event::Key(Key::Char(ch)) => {
                     if matches!(self.mode, EditorModes::Insert) {

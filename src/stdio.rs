@@ -48,6 +48,19 @@ impl Stdio {
         self.stdout.activate_raw_mode().unwrap();
     }
 
+    pub fn update_line(&mut self, line: &String, c: &Cursor) {
+        write!(
+            self.stdout,
+            "{}{}{}{}",
+            termion::cursor::Goto(1, c.relative_y),
+            clear::CurrentLine,
+            line,
+            termion::cursor::Goto(c.x + 1, c.relative_y)
+        )
+        .unwrap();
+        self.stdout.flush().unwrap();
+    }
+
     pub fn debug_print<T: std::fmt::Debug>(&mut self, data: T, y_offset: u16, c: &Cursor) {
         let str = format!("{:?}", data);
         let x = 1;

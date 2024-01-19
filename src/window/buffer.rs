@@ -1,3 +1,4 @@
+use crate::codes;
 use crate::motion::Motions;
 use crate::stdio::Stdio;
 use crate::utils;
@@ -8,13 +9,14 @@ use crate::window::segment::Segment;
 use termion::terminal_size;
 
 pub struct Buffer {
-    file_path: std::path::PathBuf,
     pub data: PieceTable,
+    pub stdio: Stdio,
     pub lines: usize,
     pub cursor: Cursor,
     pub segment: Segment,
     char_items: Vec<char>,
-    pub stdio: Stdio,
+    buffered_line: String,
+    file_path: std::path::PathBuf,
 }
 
 impl Buffer {
@@ -46,6 +48,7 @@ impl Buffer {
             segment: initial_segment,
             stdio,
             char_items: Vec::new(),
+            buffered_line: String::new(),
         }
     }
 
@@ -108,6 +111,8 @@ impl Buffer {
         // into the piece table.
         //
         // both variants should react to \n to make an insertion.
+        // when we handle a new line we need to write it as well, so when new line is created, we
+        // need to shift front item from the buffer, and rearange buffer,
         let node = self
             .segment
             .get_line(usize::from(self.cursor.absolute_y + 1))
@@ -116,5 +121,35 @@ impl Buffer {
         self.stdio.debug_print(node, 2, &self.cursor);
         self.stdio
             .debug_print(self.cursor.absolute_y, 3, &self.cursor);
+
+        if self.buffered_line.is_empty() {
+            self.buffered_line = node.value.clone();
+        }
+
+        // handle changes in line
+        match item {
+            codes::BACKSPACE => {
+                self.buffered_line.remove(usize::from(self.cursor.x - 1));
+                self.stdio.debug_print(&self.buffered_line, 4, &self.cursor);
+
+                self.stdio.update_line(&self.buffered_line, &self.cursor);
+                self.motion(Motions::Left);
+            }
+            c => {
+                let (first_pt, second_pt) = self.split_bl(usize::from(self.cursor.x - 1));
+                self.buffered_line = format!("{}{}{}", first_pt, c, second_pt);
+                self.stdio.debug_print(&self.buffered_line, 4, &self.cursor);
+
+                self.stdio.update_line(&self.buffered_line, &self.cursor);
+                self.motion(Motions::Right);
+            }
+        }
+    }
+
+    fn split_bl(&self, i: usize) -> (&str, &str) {
+        let first_pt = &self.buffered_line[..i];
+        let second_pt = &self.buffered_line[i..];
+
+        (first_pt, second_pt)
     }
 }
