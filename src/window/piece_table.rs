@@ -1,4 +1,4 @@
-use crate::window::segment::SegmentNode;
+use crate::window::segment::Segment;
 use std::collections::VecDeque;
 
 #[derive(Clone)]
@@ -110,9 +110,9 @@ impl PieceTable {
     /// from-to range append it to the ring buffer.
     /// if last line is not empty and it's withing range but it may not include \n push it to the
     /// res as well.
-    pub fn get_lines(&self, from: usize, to: usize) -> VecDeque<SegmentNode> {
+    pub fn get_lines(&self, from: usize, to: usize) -> Segment {
         let mut current_line = 1;
-        let mut res = VecDeque::with_capacity(to - from + 1 as usize);
+        let mut res = Segment::new(to - from + 1 as usize);
         let mut line_value = String::new();
         let mut current_offset = 0;
 
@@ -130,11 +130,7 @@ impl PieceTable {
 
                 if char == '\n' {
                     if current_line >= from && to >= current_line {
-                        res.push_back(SegmentNode {
-                            value: line_value.clone(),
-                            line_number: current_line,
-                            offset: current_offset,
-                        });
+                        res.new_b(line_value.clone(), current_line, current_offset);
                         line_value.clear();
                     }
                     current_line += 1;
@@ -147,30 +143,26 @@ impl PieceTable {
         }
 
         if !line_value.is_empty() && current_line >= from && current_line <= to {
-            res.push_back(SegmentNode {
-                value: line_value.clone(),
-                line_number: current_line,
-                offset: current_offset,
-            });
+            res.new_b(line_value.clone(), current_line, current_offset);
         }
 
         res
     }
 
-    pub fn next_line(&self, segment: &mut VecDeque<SegmentNode>) {
+    pub fn next_line(&self, segment: &mut Segment) {
         if let Some(last_node) = segment.back() {
             if let Some(next_line) = self
                 .get_lines(last_node.line_number + 1, last_node.line_number + 1)
                 .front()
                 .cloned()
             {
-                segment.pop_front(); // Remove the first line
-                segment.push_back(next_line); // Add the new line at the end
+                segment.pop_f(); // Remove the first line
+                segment.add_b(next_line); // Add the new line at the end
             }
         }
     }
 
-    pub fn prev_line(&self, segment: &mut VecDeque<SegmentNode>) {
+    pub fn prev_line(&self, segment: &mut Segment) {
         if let Some(first_node) = segment.front() {
             if first_node.line_number <= 1 {
                 return;
@@ -180,8 +172,8 @@ impl PieceTable {
                 .front()
                 .cloned()
             {
-                segment.pop_back();
-                segment.push_front(prev_line);
+                segment.pop_b();
+                segment.add_f(prev_line);
             }
         }
     }
