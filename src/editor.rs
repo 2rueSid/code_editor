@@ -1,10 +1,9 @@
 use crate::motion::Motions;
 use crate::window::buffer::Buffer;
-use std::io::{self, Write};
+use std::io::{Stdin, Write};
 use termion::event::{Event, Key};
-use termion::input::TermRead;
-use termion::raw::RawTerminal;
 
+use termion::input::TermRead;
 pub enum EditorModes {
     Normal,
     Insert,
@@ -21,55 +20,50 @@ impl Editor {
         }
     }
 
-    pub fn run(
-        &mut self,
-        path: Option<String>,
-        stdin: io::Stdin,
-        stdout: &mut RawTerminal<io::Stdout>,
-    ) {
-        let events = stdin.events();
+    pub fn run(&mut self, path: Option<String>, stdin: Stdin) {
         let mut buffer = Buffer::new(path);
-        buffer.display_segment(stdout);
 
-        for c in events {
+        buffer.display_segment();
+
+        for c in stdin.events() {
             let evt = c.unwrap();
 
             match evt {
                 Event::Key(Key::Ctrl('q')) => break,
-                Event::Key(Key::Left) => buffer.motion(Motions::Left, stdout),
-                Event::Key(Key::Right) => buffer.motion(Motions::Right, stdout),
-                Event::Key(Key::Up) => buffer.motion(Motions::Up, stdout),
-                Event::Key(Key::Down) => buffer.motion(Motions::Down, stdout),
+                Event::Key(Key::Left) => buffer.motion(Motions::Left),
+                Event::Key(Key::Right) => buffer.motion(Motions::Right),
+                Event::Key(Key::Up) => buffer.motion(Motions::Up),
+                Event::Key(Key::Down) => buffer.motion(Motions::Down),
                 Event::Key(Key::Char('i')) => match self.mode {
                     EditorModes::Insert => {
-                        write!(stdout, "{}i", termion::cursor::SteadyBar).unwrap();
-                        buffer.motion(Motions::Right, stdout);
+                        buffer.motion(Motions::Right);
+                        buffer.stdio.cursor_bar();
                     }
                     EditorModes::Normal => {
                         self.mode = EditorModes::Insert;
-                        write!(stdout, "{}", termion::cursor::SteadyBar).unwrap();
+                        buffer.stdio.cursor_bar();
                     }
                 },
                 Event::Key(Key::Esc) => {
                     self.mode = EditorModes::Normal;
-                    write!(stdout, "{}", termion::cursor::SteadyBlock).unwrap();
+                    buffer.stdio.cursor_block();
                 }
                 Event::Key(Key::Char(ch)) => {
                     if matches!(self.mode, EditorModes::Insert) {
-                        buffer.edit(ch, stdout);
+                        buffer.edit(ch);
                     } else {
                         match ch {
-                            'h' => buffer.motion(Motions::Left, stdout),
-                            'l' => buffer.motion(Motions::Right, stdout),
-                            'k' => buffer.motion(Motions::Up, stdout),
-                            'j' => buffer.motion(Motions::Down, stdout),
+                            'h' => buffer.motion(Motions::Left),
+                            'l' => buffer.motion(Motions::Right),
+                            'k' => buffer.motion(Motions::Up),
+                            'j' => buffer.motion(Motions::Down),
                             _ => {}
                         }
                     }
                 }
                 _ => {}
             };
-            stdout.flush().unwrap();
+            buffer.stdio.stdout.flush().unwrap();
         }
     }
 }

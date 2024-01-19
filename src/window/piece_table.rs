@@ -1,5 +1,4 @@
 use crate::window::segment::Segment;
-use std::collections::VecDeque;
 
 #[derive(Clone)]
 enum Source {
