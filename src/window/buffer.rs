@@ -45,6 +45,7 @@ impl Buffer {
             lines: file.lines().count().clone(),
             cursor: Cursor {
                 x: 1,
+                vertical_x: 1,
                 relative_y: 1,
                 absolute_y: 1,
             },
@@ -71,6 +72,7 @@ impl Buffer {
                 }
                 self.cursor.move_down(self.stdio.terminal_size.1);
                 self.update_cur_line();
+                self.cursor.set_x(self.cursor.vertical_x);
             }
             Motions::Up => {
                 let ln = self.segment.front().unwrap().line_number;
@@ -83,6 +85,7 @@ impl Buffer {
                 }
 
                 self.update_cur_line();
+                self.cursor.set_x(self.cursor.vertical_x);
             }
             Motions::Left => self.cursor.move_left(),
             Motions::Right => {
@@ -199,10 +202,23 @@ impl Buffer {
     }
 
     fn update_cur_line(&mut self) {
-        self.current_line = self
+        let new_line = self
             .segment
             .get_line(usize::from(self.cursor.absolute_y + 1))
-            .cloned();
+            .cloned()
+            .expect("line should exist");
+        let curr_line_v = self.current_line.clone().expect("should exists");
+
+        let new_ln_len = self.get_ln_len(&new_line.value);
+        let curr_ln_len = self.get_ln_len(&curr_line_v.value);
+
+        if curr_ln_len > new_ln_len {
+            self.cursor.vertical_x = new_ln_len;
+        } else {
+            self.cursor.vertical_x = self.cursor.x;
+        }
+
+        self.current_line = Ok(new_line);
     }
 
     fn get_ln_len(&mut self, ln: &String) -> u16 {

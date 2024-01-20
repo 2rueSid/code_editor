@@ -2,6 +2,7 @@ pub struct Cursor {
     pub x: u16,
     pub relative_y: u16,
     pub absolute_y: u16,
+    pub vertical_x: u16,
 }
 
 impl Cursor {
