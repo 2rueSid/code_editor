@@ -1,6 +1,7 @@
 use std::env::args;
 
 mod codes;
+mod constants;
 mod editor;
 mod motion;
 mod stdio;

@@ -5,6 +5,9 @@ pub struct Cursor {
 }
 
 impl Cursor {
+    pub fn set_x(&mut self, v: u16) {
+        self.x = v;
+    }
     pub fn move_up(&mut self) {
         if self.relative_y > 1 {
             self.relative_y -= 1;

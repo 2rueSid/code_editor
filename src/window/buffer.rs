@@ -1,10 +1,11 @@
 use crate::codes;
+use crate::constants;
 use crate::motion::Motions;
 use crate::stdio::Stdio;
 use crate::utils;
 use crate::window::cursor::Cursor;
 use crate::window::piece_table::PieceTable;
-use crate::window::segment::Segment;
+use crate::window::segment::{Segment, SegmentNode};
 
 use termion::terminal_size;
 
@@ -14,6 +15,7 @@ pub struct Buffer {
     pub lines: usize,
     pub cursor: Cursor,
     pub segment: Segment,
+    current_line: Result<SegmentNode, String>,
     char_items: Vec<char>,
     buffered_line: String,
     file_path: std::path::PathBuf,
@@ -35,6 +37,7 @@ impl Buffer {
         let piece_table = PieceTable::new(&file);
         let initial_segment = piece_table.get_lines(0, terminal_size.1.into());
         let stdio = Stdio::new();
+        let current_line = initial_segment.get_line(1).cloned();
 
         Buffer {
             file_path,
@@ -49,6 +52,7 @@ impl Buffer {
             stdio,
             char_items: Vec::new(),
             buffered_line: String::new(),
+            current_line,
         }
     }
 
@@ -66,6 +70,7 @@ impl Buffer {
                     self.display_segment();
                 }
                 self.cursor.move_down(self.stdio.terminal_size.1);
+                self.update_cur_line();
             }
             Motions::Up => {
                 let ln = self.segment.front().unwrap().line_number;
@@ -76,9 +81,17 @@ impl Buffer {
                 if self.cursor.absolute_y as i16 - 1 >= 1 {
                     self.cursor.move_up();
                 }
+
+                self.update_cur_line();
             }
             Motions::Left => self.cursor.move_left(),
-            Motions::Right => self.cursor.move_right(),
+            Motions::Right => {
+                let node = self.current_line.as_ref().expect("should be valid ln");
+                let ln_len = self.get_ln_len(&node.value.clone());
+                if self.cursor.x + 1 <= ln_len {
+                    self.cursor.move_right()
+                }
+            }
         }
 
         self.stdio.display_cursor(&self.cursor);
@@ -140,24 +153,24 @@ impl Buffer {
 
                 if (self.cursor.x as i16 - 2) < 0 {
                     // if x is less than 0, merge with line y - 1
-                    let prev_node = self
-                        .segment
-                        .get_line(usize::from(self.cursor.absolute_y - 1))
-                        .expect("should be valid line");
+                    let prev_line = match self.segment.get_line(usize::from(self.cursor.absolute_y))
+                    {
+                        Ok(v) => v,
+                        Err(_) => return,
+                    };
 
-                    // add last buffered line to the prev node
-                    let pn_value = prev_node.value.clone();
+                    let mut curr_line = self.buffered_line.clone();
+                    let mut pl_value = prev_line.value.clone();
 
-                    self.cursor.x = pn_value.len() as u16;
-                    let pn_value = pn_value.replace("\n", &self.buffered_line);
-
-                    // set current buffered line as a value of prev node + prev buff line and clean
-                    // up prev buffered line
-                    self.buffered_line = pn_value;
-
+                    pl_value.pop();
+                    curr_line.pop();
                     self.stdio.update_line(&String::from("\n"), &self.cursor);
+
+                    self.cursor.x = self.get_ln_len(&pl_value);
                     self.cursor.move_up();
-                    self.cursor.move_right();
+
+                    self.buffered_line = format!("{}{}\n", pl_value, curr_line);
+
                     self.stdio.update_line(&self.buffered_line, &self.cursor);
                     return;
                 }
@@ -183,5 +196,23 @@ impl Buffer {
         let second_pt = &self.buffered_line[i..];
 
         (first_pt, second_pt)
+    }
+
+    fn update_cur_line(&mut self) {
+        self.current_line = self
+            .segment
+            .get_line(usize::from(self.cursor.absolute_y + 1))
+            .cloned();
+    }
+
+    fn get_ln_len(&mut self, ln: &String) -> u16 {
+        let mut node_len = ln.len() as u16;
+        let tabs = ln.matches("\t").count();
+
+        if tabs > 0 {
+            node_len += tabs as u16 * constants::TABULATION_COUNT;
+        }
+
+        node_len
     }
 }
