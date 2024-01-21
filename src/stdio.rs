@@ -28,8 +28,8 @@ impl Stdio {
         self.stdout.flush().unwrap();
     }
 
-    pub fn update_cursor(&mut self, c: &Cursor) {
-        write!(self.stdout, "{}", termion::cursor::Goto(c.x, c.relative_y)).unwrap();
+    pub fn goto(&mut self, x: u16, y: u16) {
+        write!(self.stdout, "{}", termion::cursor::Goto(x, y)).unwrap();
         self.stdout.flush().unwrap();
     }
 

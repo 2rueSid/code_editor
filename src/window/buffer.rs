@@ -72,7 +72,8 @@ impl Buffer {
                 }
                 self.cursor.move_down(self.stdio.terminal_size.1);
                 self.update_cur_line();
-                self.cursor.set_x(self.cursor.vertical_x);
+                self.stdio
+                    .goto(self.cursor.vertical_x, self.cursor.relative_y);
             }
             Motions::Up => {
                 let ln = self.segment.front().unwrap().line_number;
@@ -85,19 +86,24 @@ impl Buffer {
                 }
 
                 self.update_cur_line();
-                self.cursor.set_x(self.cursor.vertical_x);
+                self.stdio
+                    .goto(self.cursor.vertical_x, self.cursor.relative_y);
             }
-            Motions::Left => self.cursor.move_left(),
+            Motions::Left => {
+                self.cursor.move_left();
+
+                self.stdio.display_cursor(&self.cursor);
+            }
             Motions::Right => {
                 let node = self.current_line.as_ref().expect("should be valid ln");
                 let ln_len = self.get_ln_len(&node.value.clone());
                 if self.cursor.x + 1 <= ln_len {
                     self.cursor.move_right()
                 }
+
+                self.stdio.display_cursor(&self.cursor);
             }
         }
-
-        self.stdio.display_cursor(&self.cursor);
     }
 
     pub fn edit(&mut self, item: char) {
@@ -207,12 +213,10 @@ impl Buffer {
             .get_line(usize::from(self.cursor.absolute_y + 1))
             .cloned()
             .expect("line should exist");
-        let curr_line_v = self.current_line.clone().expect("should exists");
 
         let new_ln_len = self.get_ln_len(&new_line.value);
-        let curr_ln_len = self.get_ln_len(&curr_line_v.value);
 
-        if curr_ln_len > new_ln_len {
+        if new_ln_len < self.cursor.x {
             self.cursor.vertical_x = new_ln_len;
         } else {
             self.cursor.vertical_x = self.cursor.x;
