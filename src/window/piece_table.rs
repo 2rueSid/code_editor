@@ -41,7 +41,7 @@ impl PieceTable {
     /// to get offset we can store offset and length of the segment node
     /// if we have the offset we can then just make a simple calculations to get the offset
     /// parameter.
-    pub fn insert(&mut self, items: String, offset: usize) {
+    pub fn insert(&mut self, items: &String, offset: usize) {
         if items.is_empty() {
             return;
         }

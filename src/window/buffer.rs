@@ -145,17 +145,13 @@ impl Buffer {
         // both variants should react to \n to make an insertion.
         // when we handle a new line we need to write it as well, so when new line is created, we
         // need to shift front item from the buffer, and rearange buffer,
-        let node = self
-            .segment
-            .get_line(usize::from(self.cursor.absolute_y + 1))
-            .expect("Line not valid under the curosr");
-
-        self.stdio.debug_print(node, 2, &self.cursor);
-        self.stdio
-            .debug_print(self.cursor.absolute_y, 3, &self.cursor);
-
         if self.buffered_line.is_empty() {
-            self.buffered_line = node.value.clone();
+            let ln = match &self.current_line {
+                Ok(v) => v.value.clone(),
+                Err(_) => String::new(),
+            };
+
+            self.buffered_line = ln.to_string();
         }
 
         // handle changes in line
@@ -191,13 +187,59 @@ impl Buffer {
                     self.buffered_line = format!("{}{}\n", pl_value, curr_line);
 
                     self.stdio.update_line(&self.buffered_line, &self.cursor);
+
+                    // perform deletion here
+
                     return;
                 }
                 self.buffered_line.remove(usize::from(self.cursor.x - 2));
-                self.stdio.debug_print(&self.buffered_line, 4, &self.cursor);
 
                 self.stdio.update_line(&self.buffered_line, &self.cursor);
                 self.motion(Motions::Left);
+            }
+            codes::RETURN => {
+                // need to create a function that regenerates segment optimally eg only few nodes
+                // 1. check if current_line == buffered_line
+                // 2. if equals
+                // 2.1 create new line below
+                // 2.2 update buffered_line
+                // 2.3 insert new line into the piece table
+                // 2.4 regenerate segment
+                // 2.5 update cursor
+                // 2.6 return
+                // 3. else
+                // 3.1 calculate offset based on the current line and the buffered line
+                // 3.2 create new line below
+                // 3.3 insert updated line above and new line below together into the piece table
+                // 3.4 regenerate segment
+                // 3.5 move cursor line below
+                // 3.6 return
+                let current_line = match &self.current_line {
+                    Ok(l) => l.clone(),
+                    Err(_) => {
+                        // just create new line
+                        return;
+                    }
+                };
+
+                // no changes to the line above
+                if current_line.value == self.buffered_line {
+                    self.buffered_line = String::from("\n");
+                    let offset = current_line.offset + current_line.value.len() - 1;
+                    self.data.insert(&self.buffered_line, offset);
+
+                    // regenerate segment function, we need to only update segment partially,
+                    // eg remove last element, move pre last to the last, and
+                    // ? regenerate offset for each segment node
+                    // ? regenerate line number for each node
+                    // ? redraw lines below new line
+
+                    self.segment
+                        .insert_and_shift(current_line.line_number, &self.buffered_line);
+                    self.display_segment();
+                    self.motion(Motions::Down);
+                    return;
+                }
             }
             c => {
                 let (first_pt, second_pt) = self.split_bl(usize::from(self.cursor.x - 1));
@@ -205,7 +247,7 @@ impl Buffer {
                 self.stdio.debug_print(&self.buffered_line, 4, &self.cursor);
 
                 self.stdio.update_line(&self.buffered_line, &self.cursor);
-                self.motion(Motions::Right);
+                self.cursor.move_right();
             }
         }
     }

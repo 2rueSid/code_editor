@@ -6,6 +6,7 @@ pub struct SegmentNode {
     pub value: String,
     pub line_number: usize,
     pub offset: usize,
+    pub updated: bool,
 }
 
 impl SegmentNode {
@@ -14,6 +15,7 @@ impl SegmentNode {
             value: v,
             line_number: ln,
             offset: ofst,
+            updated: false,
         }
     }
 }
@@ -44,6 +46,46 @@ impl Segment {
             Some(node) => Ok(node),
             None => Err("Not Found".to_string()),
         }
+    }
+
+    pub fn insert_and_shift(&mut self, ln: usize, new_node: &String) {
+        let back_n = self.back().expect("Back should exist").clone();
+        if back_n.line_number == ln {
+            // if is the last node, just pop first and push a new node to the end
+            self.pop_f();
+            self.new_b(
+                new_node.to_string(),
+                ln + 1,
+                back_n.offset + back_n.value.len() - 1,
+            );
+            return;
+        }
+
+        let mut found = false;
+        let mut new_segment: VecDeque<SegmentNode> = VecDeque::with_capacity(self.nodes.capacity());
+
+        for n in self.nodes.iter() {
+            if n.line_number >= ln + 1 && new_segment.len() <= new_segment.capacity() {
+                if !found {
+                    found = true;
+                    new_segment.push_back(SegmentNode {
+                        value: new_node.clone(),
+                        line_number: n.line_number,
+                        offset: n.offset,
+                        updated: true,
+                    });
+                }
+                let mut updated_n = n.clone();
+                updated_n.updated = true;
+                updated_n.line_number = n.line_number + 1;
+                updated_n.offset = n.offset + new_node.len() - 1;
+                new_segment.push_back(updated_n);
+            } else {
+                new_segment.push_back(n.clone());
+            }
+        }
+
+        self.nodes = new_segment;
     }
 
     pub fn add_b(&mut self, n: SegmentNode) {
