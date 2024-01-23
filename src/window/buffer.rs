@@ -230,6 +230,17 @@ impl Buffer {
                         1 => {
                             // Cursor is at the beginning of the line
                             // Move current line to the next line and make current empty
+                            let new_line = current_line.value.clone();
+                            let curr_line = "\n";
+
+                            self.data
+                                .insert(&format!("{}{}", curr_line, new_line), current_line.offset);
+
+                            self.buffered_line = String::new();
+
+                            self.segment
+                                .insert_at(current_line.line_number, &new_line, 1);
+                            self.display_segment();
                         }
                         _ if self.cursor.x == current_line_len => {
                             // Cursor is at the end of the line

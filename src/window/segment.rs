@@ -20,6 +20,7 @@ impl SegmentNode {
     }
 }
 
+#[derive(Debug)]
 pub struct Segment {
     pub nodes: VecDeque<SegmentNode>,
 }
@@ -42,6 +43,7 @@ impl Segment {
     }
 
     pub fn get_line(&self, ln: usize) -> Result<&SegmentNode, String> {
+        // as lines are sorted we can use bs
         match self
             .nodes
             .binary_search_by(|node| node.line_number.cmp(&ln))
@@ -51,38 +53,39 @@ impl Segment {
         }
     }
 
-    pub fn insert_and_shift(&mut self, ln: usize, new_node: &String) {
-        let back_n = self.back().expect("Back should exist").clone();
-        if back_n.line_number == ln {
-            // if is the last node, just pop first and push a new node to the end
-            self.pop_f();
-            self.new_b(
-                new_node.to_string(),
-                ln + 1,
-                back_n.offset + back_n.value.len() - 1,
-            );
-            return;
-        }
-
+    pub fn insert_at(&mut self, ln: usize, new_node: &String, x: u16) {
         let mut found = false;
         let mut new_segment: VecDeque<SegmentNode> = VecDeque::with_capacity(self.nodes.capacity());
 
-        for n in self.nodes.iter() {
-            if n.line_number >= ln + 1 && new_segment.len() <= new_segment.capacity() {
+        for (i, n) in self.nodes.iter().enumerate() {
+            if n.line_number == ln {
+                if x == 1 {
+                    new_segment.push_back(SegmentNode {
+                        value: String::from("\n"),
+                        line_number: ln,
+                        offset: n.offset,
+                        updated: true,
+                    })
+                }
+            } else if n.line_number > ln && i + 1 <= new_segment.capacity() {
+                let b = new_segment.back().expect("should exist").clone();
+
                 if !found {
                     found = true;
                     new_segment.push_back(SegmentNode {
                         value: new_node.clone(),
-                        line_number: n.line_number,
-                        offset: n.offset,
+                        line_number: n.line_number + 1,
+                        offset: b.offset + b.value.len() - 1,
                         updated: true,
-                    });
+                    })
                 }
-                let mut updated_n = n.clone();
-                updated_n.updated = true;
-                updated_n.line_number = n.line_number + 1;
-                updated_n.offset = n.offset + new_node.len() - 1;
-                new_segment.push_back(updated_n);
+
+                new_segment.push_back(SegmentNode {
+                    value: n.value.clone(),
+                    line_number: n.line_number + 1,
+                    offset: b.offset + b.value.len() - 1,
+                    updated: true,
+                })
             } else {
                 new_segment.push_back(n.clone());
             }
