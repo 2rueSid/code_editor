@@ -222,22 +222,37 @@ impl Buffer {
                     }
                 };
 
+                let current_line_len = self.get_ln_len(&current_line.value);
+
                 // no changes to the line above
                 if current_line.value == self.buffered_line {
-                    self.buffered_line = String::from("\n");
-                    let offset = current_line.offset + current_line.value.len() - 1;
-                    self.data.insert(&self.buffered_line, offset);
-
-                    // regenerate segment function, we need to only update segment partially,
-                    // eg remove last element, move pre last to the last, and
-                    // ? regenerate offset for each segment node
-                    // ? regenerate line number for each node
-                    // ? redraw lines below new line
-
-                    self.segment
-                        .insert_and_shift(current_line.line_number, &self.buffered_line);
-                    self.display_segment();
-                    self.motion(Motions::Down);
+                    match self.cursor.x {
+                        1 => {
+                            // Cursor is at the beginning of the line
+                            // Move current line to the next line and make current empty
+                        }
+                        _ if self.cursor.x == current_line_len => {
+                            // Cursor is at the end of the line
+                            // Make a simple new line below
+                        }
+                        _ => {
+                            // Cursor is somewhere in the middle of the line
+                        }
+                    };
+                    // self.buffered_line = String::from("\n");
+                    // let offset = current_line.offset + current_line.value.len() - 1;
+                    // self.data.insert(&self.buffered_line, offset);
+                    //
+                    // // regenerate segment function, we need to only update segment partially,
+                    // // eg remove last element, move pre last to the last, and
+                    // // ? regenerate offset for each segment node
+                    // // ? regenerate line number for each node
+                    // // ? redraw lines below new line
+                    //
+                    // self.segment
+                    //     .insert_and_shift(current_line.line_number, &self.buffered_line);
+                    // self.display_segment();
+                    // self.cursor.move_down(self.stdio.terminal_size.1);
                     return;
                 }
             }

@@ -42,9 +42,12 @@ impl Segment {
     }
 
     pub fn get_line(&self, ln: usize) -> Result<&SegmentNode, String> {
-        match self.nodes.iter().find(|&n| n.line_number == ln) {
-            Some(node) => Ok(node),
-            None => Err("Not Found".to_string()),
+        match self
+            .nodes
+            .binary_search_by(|node| node.line_number.cmp(&ln))
+        {
+            Ok(index) => Ok(&self.nodes[index]),
+            Err(_) => Err("Not Found".to_string()),
         }
     }
 
