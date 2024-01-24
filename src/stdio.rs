@@ -33,13 +33,27 @@ impl Stdio {
         self.stdout.flush().unwrap();
     }
 
+    pub fn display_below(&mut self, x: u16, y: u16, data: &String) {
+        self.stdout.suspend_raw_mode().unwrap();
+        write!(
+            self.stdout,
+            "{}{}{}",
+            termion::cursor::Goto(x, y),
+            termion::clear::AfterCursor,
+            data
+        )
+        .unwrap();
+        self.stdout.flush().unwrap();
+
+        self.stdout.activate_raw_mode().unwrap();
+    }
+
     pub fn display_cursor(&mut self, c: &Cursor) {
         let cursor_position_str = format!("x: {} y: {}", c.x, c.absolute_y);
 
         let offset = cursor_position_str.len();
         let x = self.terminal_size.0 - offset as u16;
         let y = self.terminal_size.1 - 1;
-        self.stdout.suspend_raw_mode().unwrap();
         write!(
             self.stdout,
             "{}{}{}{}",
@@ -50,7 +64,6 @@ impl Stdio {
         )
         .unwrap();
         self.stdout.flush().unwrap();
-        self.stdout.activate_raw_mode().unwrap();
     }
 
     pub fn update_line(&mut self, line: &String, c: &Cursor) {

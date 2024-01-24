@@ -233,14 +233,26 @@ impl Buffer {
                             let new_line = current_line.value.clone();
                             let curr_line = "\n";
 
-                            self.data
-                                .insert(&format!("{}{}", curr_line, new_line), current_line.offset);
+                            self.data.insert(
+                                &format!("{}{}", &curr_line, &new_line),
+                                current_line.offset,
+                            );
 
                             self.buffered_line = String::new();
 
                             self.segment
                                 .insert_at(current_line.line_number, &new_line, 1);
-                            self.display_segment();
+                            self.cursor.move_down(self.stdio.terminal_size.1);
+
+                            // self.update_cur_line();
+                            self.stdio.display_below(
+                                self.cursor.x,
+                                self.cursor.relative_y,
+                                &self
+                                    .segment
+                                    .get_lines_after(current_line.line_number)
+                                    .unwrap(),
+                            );
                         }
                         _ if self.cursor.x == current_line_len => {
                             // Cursor is at the end of the line

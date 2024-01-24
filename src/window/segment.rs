@@ -53,6 +53,22 @@ impl Segment {
         }
     }
 
+    pub fn get_lines_after(&self, ln: usize) -> Option<String> {
+        if let (Some(front), Some(back)) = (self.front(), self.back()) {
+            if front.line_number <= ln && back.line_number > ln {
+                let mut res = String::new();
+
+                for n in self.nodes.iter() {
+                    if n.line_number >= ln {
+                        res.push_str(n.value.as_str());
+                    }
+                }
+
+                return Some(res);
+            }
+        }
+        None
+    }
     pub fn insert_at(&mut self, ln: usize, new_node: &String, x: u16) {
         let mut found = false;
         let mut new_segment: VecDeque<SegmentNode> = VecDeque::with_capacity(self.nodes.capacity());
