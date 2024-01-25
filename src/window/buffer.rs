@@ -1,5 +1,6 @@
 use crate::codes;
 use crate::constants;
+use crate::logger;
 use crate::motion::Motions;
 use crate::stdio::Stdio;
 use crate::utils;
@@ -96,7 +97,6 @@ impl Buffer {
                 }
 
                 self.cursor.move_left();
-                self.stdio.display_cursor(&self.cursor);
             }
             Motions::Right => {
                 if self.cursor.x > self.cursor.vertical_x {
@@ -110,10 +110,10 @@ impl Buffer {
                 if self.cursor.x + 1 < ln_len {
                     self.cursor.move_right()
                 }
-
-                self.stdio.display_cursor(&self.cursor);
             }
         }
+
+        self.stdio.display_cursor(&self.cursor);
     }
 
     pub fn edit(&mut self, item: char) {
@@ -233,26 +233,31 @@ impl Buffer {
                             let new_line = current_line.value.clone();
                             let curr_line = "\n";
 
-                            self.data.insert(
-                                &format!("{}{}", &curr_line, &new_line),
-                                current_line.offset,
-                            );
+                            logger::log_to_file(&format!("{:?}", current_line.clone()));
+
+                            // self.data.insert(
+                            //     &format!("{}{}", &curr_line, &new_line),
+                            //     current_line.offset,
+                            // );
 
                             self.buffered_line = String::new();
 
                             self.segment
                                 .insert_at(current_line.line_number, &new_line, 1);
-                            self.cursor.move_down(self.stdio.terminal_size.1);
 
-                            // self.update_cur_line();
-                            self.stdio.display_below(
-                                self.cursor.x,
-                                self.cursor.relative_y,
-                                &self
-                                    .segment
-                                    .get_lines_after(current_line.line_number)
-                                    .unwrap(),
-                            );
+                            logger::log_to_file(&format!("{:?}", &self.segment));
+                            self.display_segment();
+
+                            self.motion(Motions::Down);
+                            // self.stdio.display_below(
+                            //
+                            //     self.cursor.x,
+                            //     self.cursor.relative_y + 1,
+                            //     &self
+                            //         .segment
+                            //         .get_lines_after(current_line.line_number)
+                            //         .unwrap(),
+                            // );
                         }
                         _ if self.cursor.x == current_line_len => {
                             // Cursor is at the end of the line

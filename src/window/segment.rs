@@ -71,9 +71,9 @@ impl Segment {
     }
     pub fn insert_at(&mut self, ln: usize, new_node: &String, x: u16) {
         let mut found = false;
-        let mut new_segment: VecDeque<SegmentNode> = VecDeque::with_capacity(self.nodes.capacity());
+        let mut new_segment: VecDeque<SegmentNode> = VecDeque::new();
 
-        for (i, n) in self.nodes.iter().enumerate() {
+        for n in self.nodes.iter() {
             if n.line_number == ln {
                 if x == 1 {
                     new_segment.push_back(SegmentNode {
@@ -83,17 +83,25 @@ impl Segment {
                         updated: true,
                     })
                 }
-            } else if n.line_number > ln && i + 1 <= new_segment.capacity() {
+            } else if n.line_number > ln {
                 let b = new_segment.back().expect("should exist").clone();
 
                 if !found {
                     found = true;
                     new_segment.push_back(SegmentNode {
                         value: new_node.clone(),
+                        line_number: n.line_number,
+                        offset: b.offset + b.value.len() - 1,
+                        updated: true,
+                    });
+                    new_segment.push_back(SegmentNode {
+                        value: n.value.clone(),
                         line_number: n.line_number + 1,
                         offset: b.offset + b.value.len() - 1,
                         updated: true,
-                    })
+                    });
+
+                    continue;
                 }
 
                 new_segment.push_back(SegmentNode {
@@ -101,12 +109,11 @@ impl Segment {
                     line_number: n.line_number + 1,
                     offset: b.offset + b.value.len() - 1,
                     updated: true,
-                })
+                });
             } else {
                 new_segment.push_back(n.clone());
             }
         }
-
         self.nodes = new_segment;
     }
 

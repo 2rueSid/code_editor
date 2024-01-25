@@ -3,6 +3,7 @@ use std::env::args;
 mod codes;
 mod constants;
 mod editor;
+mod logger;
 mod motion;
 mod stdio;
 mod utils;
