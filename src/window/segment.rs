@@ -34,7 +34,7 @@ impl Segment {
 
     pub fn construct_segment(&self) -> String {
         let mut lines = String::new();
-        
+
         for line in self.nodes.iter() {
             lines.push_str(&line.value);
         }
@@ -53,68 +53,44 @@ impl Segment {
         }
     }
 
-    pub fn get_lines_after(&self, ln: usize) -> Option<String> {
-        if let (Some(front), Some(back)) = (self.front(), self.back()) {
-            if front.line_number <= ln && back.line_number > ln {
-                let mut res = String::new();
-
-                for n in self.nodes.iter() {
-                    if n.line_number >= ln {
-                        res.push_str(n.value.as_str());
-                    }
-                }
-
-                return Some(res);
-            }
+    pub fn get_line_idx(&self, ln: usize) -> Result<usize, String> {
+        match self
+            .nodes
+            .binary_search_by(|node| node.line_number.cmp(&ln))
+        {
+            Ok(index) => Ok(index),
+            Err(_) => Err("Not Found".to_string()),
         }
-        None
     }
-    pub fn insert_at(&mut self, ln: usize, new_node: &String, x: u16) {
-        let mut found = false;
-        let mut new_segment: VecDeque<SegmentNode> = VecDeque::new();
+    pub fn insert_at(&mut self, ln: usize, new_node: &String) {
+        let idx = self.get_line_idx(ln).unwrap();
+        let mut temp = VecDeque::new();
 
-        for n in self.nodes.iter() {
-            if n.line_number == ln {
-                if x == 1 {
-                    new_segment.push_back(SegmentNode {
-                        value: String::from("\n"),
-                        line_number: ln,
-                        offset: n.offset,
-                        updated: true,
-                    })
-                }
-            } else if n.line_number > ln {
-                let b = new_segment.back().expect("should exist").clone();
-
-                if !found {
-                    found = true;
-                    new_segment.push_back(SegmentNode {
-                        value: new_node.clone(),
-                        line_number: n.line_number,
-                        offset: b.offset + b.value.len() - 1,
-                        updated: true,
-                    });
-                    new_segment.push_back(SegmentNode {
-                        value: n.value.clone(),
-                        line_number: n.line_number + 1,
-                        offset: b.offset + b.value.len() - 1,
-                        updated: true,
-                    });
-
-                    continue;
-                }
-
-                new_segment.push_back(SegmentNode {
-                    value: n.value.clone(),
-                    line_number: n.line_number + 1,
-                    offset: b.offset + b.value.len() - 1,
-                    updated: true,
-                });
-            } else {
-                new_segment.push_back(n.clone());
-            }
+        self.nodes.pop_back();
+        let mut i = 0;
+        while i < idx {
+            temp.push_back(self.nodes.pop_front().unwrap());
+            i += 1;
         }
-        self.nodes = new_segment;
+
+        let last = &temp.back().unwrap();
+        temp.push_back(SegmentNode {
+            value: new_node.clone(),
+            line_number: ln,
+            offset: last.offset + last.value.len(),
+            updated: true,
+        });
+
+        while let Some(n) = self.nodes.pop_front() {
+            temp.push_back(SegmentNode {
+                value: n.value,
+                line_number: n.line_number + 1,
+                offset: n.offset,
+                updated: true,
+            });
+        }
+
+        self.nodes = temp;
     }
 
     pub fn add_b(&mut self, n: SegmentNode) {

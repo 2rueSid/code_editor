@@ -220,50 +220,17 @@ impl Buffer {
                 // 3.4 regenerate segment
                 // 3.5 move cursor line below
                 // 3.6 return
-                let current_line = match &self.current_line {
-                    Ok(l) => l.clone(),
-                    Err(_) => {
-                        // just create new line
-                        return;
-                    }
-                };
-
+                let current_line = &self.current_line.clone().unwrap();
                 let current_line_len = self.get_ln_len(&current_line.value);
 
                 // no changes to the line above
                 if current_line.value == self.buffered_line {
                     match self.cursor.x {
                         1 => {
-                            // Cursor is at the beginning of the line
-                            // Move current line to the next line and make current empty
-                            let new_line = current_line.value.clone();
-                            let curr_line = "\n";
-
-                            logger::log_to_file(&format!("{:?}", current_line.clone()));
-
-                            // self.data.insert(
-                            //     &format!("{}{}", &curr_line, &new_line),
-                            //     current_line.offset,
-                            // );
-
-                            self.buffered_line = String::new();
-
                             self.segment
-                                .insert_at(current_line.line_number, &new_line, 1);
-
-                            logger::log_to_file(&format!("{:?}", &self.segment));
+                                .insert_at(current_line.line_number, &String::from("\n"));
                             self.display_segment();
-
                             self.motion(Motions::Down);
-                            // self.stdio.display_below(
-                            //
-                            //     self.cursor.x,
-                            //     self.cursor.relative_y + 1,
-                            //     &self
-                            //         .segment
-                            //         .get_lines_after(current_line.line_number)
-                            //         .unwrap(),
-                            // );
                         }
                         _ if self.cursor.x == current_line_len => {
                             // Cursor is at the end of the line
@@ -273,20 +240,11 @@ impl Buffer {
                             // Cursor is somewhere in the middle of the line
                         }
                     };
-                    // self.buffered_line = String::from("\n");
-                    // let offset = current_line.offset + current_line.value.len() - 1;
-                    // self.data.insert(&self.buffered_line, offset);
-                    //
                     // // regenerate segment function, we need to only update segment partially,
                     // // eg remove last element, move pre last to the last, and
                     // // ? regenerate offset for each segment node
                     // // ? regenerate line number for each node
                     // // ? redraw lines below new line
-                    //
-                    // self.segment
-                    //     .insert_and_shift(current_line.line_number, &self.buffered_line);
-                    // self.display_segment();
-                    // self.cursor.move_down(self.stdio.terminal_size.1);
                     return;
                 }
             }
