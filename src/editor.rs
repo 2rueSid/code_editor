@@ -24,8 +24,6 @@ impl Editor {
     pub fn run(&mut self, path: Option<String>, stdin: Stdin) {
         let mut buffer = Buffer::new(path);
 
-        buffer.display_segment();
-
         for c in stdin.events() {
             let evt = c.unwrap();
 

@@ -1,3 +1,4 @@
+#[derive(Clone, Debug)]
 pub struct Cursor {
     pub x: u16,
     pub relative_y: u16,

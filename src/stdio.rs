@@ -28,11 +28,6 @@ impl Stdio {
         self.stdout.flush().unwrap();
     }
 
-    pub fn goto(&mut self, x: u16, y: u16) {
-        write!(self.stdout, "{}", termion::cursor::Goto(x, y)).unwrap();
-        self.stdout.flush().unwrap();
-    }
-
     pub fn display_below(&mut self, x: u16, y: u16, data: &String) {
         self.stdout.suspend_raw_mode().unwrap();
         write!(
@@ -48,22 +43,9 @@ impl Stdio {
         self.stdout.activate_raw_mode().unwrap();
     }
 
-    pub fn display_cursor(&mut self, c: &Cursor) {
-        let cursor_position_str = format!("x: {} y: {}", c.x, c.absolute_y);
-
-        let offset = cursor_position_str.len();
-        let x = self.terminal_size.0 - offset as u16;
-        let y = self.terminal_size.1 - 1;
-        write!(
-            self.stdout,
-            "{}{}{}{}",
-            termion::cursor::Goto(x, y),
-            clear::CurrentLine,
-            cursor_position_str,
-            termion::cursor::Goto(c.x, c.relative_y)
-        )
-        .unwrap();
-        self.stdout.flush().unwrap();
+    pub fn goto_line(&mut self, pos: (u16, u16, u16)) {
+        self.display_cursor(pos.0, pos.2);
+        self.goto(pos.0, pos.1);
     }
 
     pub fn update_line(&mut self, line: &String, c: &Cursor) {
@@ -78,23 +60,17 @@ impl Stdio {
         .unwrap();
         self.stdout.flush().unwrap();
     }
-
-    pub fn debug_print<T: std::fmt::Debug>(&mut self, data: T, y_offset: u16, c: &Cursor) {
-        let str = format!("{:?}", data);
-        let x = 1;
-        let y = self.terminal_size.1 as i16 - y_offset as i16;
-        self.stdout.suspend_raw_mode().unwrap();
+    pub fn update_line_at(&mut self, line: &String, c: (u16, u16)) {
         write!(
             self.stdout,
             "{}{}{}{}",
-            termion::cursor::Goto(x, y as u16),
+            termion::cursor::Goto(1, c.1),
             clear::CurrentLine,
-            str,
-            termion::cursor::Goto(c.x, c.relative_y)
+            line,
+            termion::cursor::Goto(c.0 + 1, c.1)
         )
         .unwrap();
         self.stdout.flush().unwrap();
-        self.stdout.activate_raw_mode().unwrap();
     }
 
     pub fn display_segment(&mut self, text: String) {
@@ -104,5 +80,27 @@ impl Stdio {
         self.stdout.flush().unwrap();
 
         self.stdout.activate_raw_mode().unwrap();
+    }
+
+    fn goto(&mut self, x: u16, y: u16) {
+        write!(self.stdout, "{}", termion::cursor::Goto(x, y)).unwrap();
+        self.stdout.flush().unwrap();
+    }
+
+    fn display_cursor(&mut self, x: u16, abs_y: u16) {
+        let cursor_position_str = format!("x: {} y: {}", x, abs_y);
+
+        let offset = cursor_position_str.len();
+        let x = self.terminal_size.0 - offset as u16;
+        let y = self.terminal_size.1;
+        write!(
+            self.stdout,
+            "{}{}{}",
+            termion::cursor::Goto(x, y),
+            clear::CurrentLine,
+            cursor_position_str,
+        )
+        .unwrap();
+        self.stdout.flush().unwrap();
     }
 }

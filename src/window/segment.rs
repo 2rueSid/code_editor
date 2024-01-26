@@ -34,7 +34,7 @@ impl Segment {
 
     pub fn construct_segment(&self) -> String {
         let mut lines = String::new();
-
+        
         for line in self.nodes.iter() {
             lines.push_str(&line.value);
         }

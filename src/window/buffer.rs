@@ -36,11 +36,11 @@ impl Buffer {
 
         let terminal_size = terminal_size().unwrap();
         let piece_table = PieceTable::new(&file);
-        let initial_segment = piece_table.get_lines(0, terminal_size.1.into());
+        let initial_segment = piece_table.get_lines(0, (terminal_size.1 - 1).into());
         let stdio = Stdio::new();
         let current_line = initial_segment.get_line(1).cloned();
 
-        Buffer {
+        let mut buffer = Buffer {
             file_path,
             data: piece_table,
             lines: file.lines().count().clone(),
@@ -55,12 +55,20 @@ impl Buffer {
             char_items: Vec::new(),
             buffered_line: String::new(),
             current_line,
-        }
+        };
+
+        buffer.display_segment();
+        buffer.stdio.goto_line((
+            buffer.cursor.x,
+            buffer.cursor.relative_y,
+            buffer.cursor.absolute_y,
+        ));
+
+        buffer
     }
 
     pub fn display_segment(&mut self) {
         let text = self.segment.construct_segment();
-
         self.stdio.display_segment(text);
     }
 
@@ -73,12 +81,11 @@ impl Buffer {
                 }
                 self.cursor.move_down(self.stdio.terminal_size.1);
                 self.update_cur_line();
-                self.stdio
-                    .goto(self.cursor.vertical_x, self.cursor.relative_y);
+                self.display_motion(self.cursor.vertical_x);
             }
             Motions::Up => {
                 let ln = self.segment.front().unwrap().line_number;
-                if usize::from(self.cursor.absolute_y) < ln {
+                if usize::from(self.cursor.absolute_y) <= ln {
                     self.data.prev_line(&mut self.segment);
                     self.display_segment();
                 }
@@ -87,8 +94,7 @@ impl Buffer {
                 }
 
                 self.update_cur_line();
-                self.stdio
-                    .goto(self.cursor.vertical_x, self.cursor.relative_y);
+                self.display_motion(self.cursor.vertical_x);
             }
             Motions::Left => {
                 if self.cursor.x > self.cursor.vertical_x {
@@ -97,6 +103,7 @@ impl Buffer {
                 }
 
                 self.cursor.move_left();
+                self.display_motion(self.cursor.x);
             }
             Motions::Right => {
                 if self.cursor.x > self.cursor.vertical_x {
@@ -110,10 +117,9 @@ impl Buffer {
                 if self.cursor.x + 1 < ln_len {
                     self.cursor.move_right()
                 }
+                self.display_motion(self.cursor.x);
             }
         }
-
-        self.stdio.display_cursor(&self.cursor);
     }
 
     pub fn edit(&mut self, item: char) {
@@ -287,7 +293,6 @@ impl Buffer {
             c => {
                 let (first_pt, second_pt) = self.split_bl(usize::from(self.cursor.x - 1));
                 self.buffered_line = format!("{}{}{}", first_pt, c, second_pt);
-                self.stdio.debug_print(&self.buffered_line, 4, &self.cursor);
 
                 self.stdio.update_line(&self.buffered_line, &self.cursor);
                 self.cursor.move_right();
@@ -305,9 +310,9 @@ impl Buffer {
     fn update_cur_line(&mut self) {
         let new_line = self
             .segment
-            .get_line(usize::from(self.cursor.absolute_y + 1))
+            .get_line(usize::from(self.cursor.absolute_y))
             .cloned()
-            .expect("line should exist");
+            .unwrap();
 
         let new_ln_len = self.get_ln_len(&new_line.value);
 
@@ -329,5 +334,10 @@ impl Buffer {
         }
 
         node_len
+    }
+
+    fn display_motion(&mut self, x: u16) {
+        self.stdio
+            .goto_line((x, self.cursor.relative_y, self.cursor.absolute_y));
     }
 }
