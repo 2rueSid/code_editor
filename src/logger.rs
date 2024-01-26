@@ -26,7 +26,7 @@ pub fn log_to_file(msg: &str) {
     };
 
     let mut formatted_msg = String::new();
-    let _ = write!(formatted_msg, "\n[{}]\n{}\n\n", t, msg);
+    let _ = write!(formatted_msg, "\n[{}]\n{}", t, msg);
 
     if let Err(e) = file.write_all(formatted_msg.as_bytes()) {
         eprintln!("Couldn't write to file: {}", e);
