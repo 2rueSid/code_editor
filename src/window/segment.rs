@@ -63,7 +63,12 @@ impl Segment {
         }
     }
     pub fn insert_at(&mut self, ln: usize, new_node: &String) {
-        let idx = self.get_line_idx(ln).unwrap();
+        let idx = self.get_line_idx(ln);
+        if idx.is_err() {
+            return;
+        }
+        let idx = idx.unwrap();
+
         let mut temp = VecDeque::new();
 
         self.nodes.pop_back();
