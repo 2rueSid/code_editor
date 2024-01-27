@@ -68,18 +68,29 @@ impl Segment {
 
         self.nodes.pop_back();
         let mut i = 0;
-        while i < idx {
-            temp.push_back(self.nodes.pop_front().unwrap());
-            i += 1;
-        }
+        if idx > i {
+            while i < idx {
+                temp.push_back(self.nodes.pop_front().unwrap());
+                i += 1;
+            }
 
-        let last = &temp.back().unwrap();
-        temp.push_back(SegmentNode {
-            value: new_node.clone(),
-            line_number: ln,
-            offset: last.offset + last.value.len(),
-            updated: true,
-        });
+            let last = &temp.back().unwrap();
+            temp.push_back(SegmentNode {
+                value: new_node.clone(),
+                line_number: ln,
+                offset: last.offset + last.value.len(),
+                updated: true,
+            });
+        } else {
+            let first = self.nodes.front().unwrap();
+            temp.push_back(SegmentNode {
+                value: new_node.clone(),
+                line_number: ln,
+                offset: first.offset,
+                updated: true,
+            });
+            // temp.push_back()
+        }
 
         while let Some(n) = self.nodes.pop_front() {
             temp.push_back(SegmentNode {

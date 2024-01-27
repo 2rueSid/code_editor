@@ -63,6 +63,7 @@ impl Buffer {
             buffer.cursor.relative_y,
             buffer.cursor.absolute_y,
         ));
+        buffer.stdio.cursor_block();
 
         buffer
     }
@@ -114,7 +115,7 @@ impl Buffer {
                 let node = self.current_line.as_ref().expect("should be valid ln");
                 let ln_len = self.get_ln_len(&node.value.clone());
 
-                if self.cursor.x + 1 < ln_len {
+                if self.cursor.x < ln_len {
                     self.cursor.move_right()
                 }
                 self.display_motion(self.cursor.x);
@@ -223,30 +224,44 @@ impl Buffer {
                 let current_line = &self.current_line.clone().unwrap();
                 let current_line_len = self.get_ln_len(&current_line.value);
 
+                logger::log_to_file(&format!(
+                    "x: {} cl: {:?} cl_len: {}",
+                    self.cursor.x, current_line, current_line_len
+                ));
                 // no changes to the line above
-                if current_line.value == self.buffered_line {
-                    match self.cursor.x {
-                        1 => {
-                            self.segment
-                                .insert_at(current_line.line_number, &String::from("\n"));
-                            self.display_segment();
-                            self.motion(Motions::Down);
-                        }
-                        _ if self.cursor.x == current_line_len => {
-                            // Cursor is at the end of the line
-                            // Make a simple new line below
-                        }
-                        _ => {
-                            // Cursor is somewhere in the middle of the line
-                        }
-                    };
-                    // // regenerate segment function, we need to only update segment partially,
-                    // // eg remove last element, move pre last to the last, and
-                    // // ? regenerate offset for each segment node
-                    // // ? regenerate line number for each node
-                    // // ? redraw lines below new line
-                    return;
+                if self.cursor.x == 1 {
+                    self.segment
+                        .insert_at(current_line.line_number, &String::from("\n"));
+                    self.display_segment();
+                    self.motion(Motions::Down);
+                } else if self.cursor.x == current_line_len {
+                    logger::log_to_file(&format!("{:?}", &current_line));
+                } else {
                 }
+
+                return;
+                // if current_line.value == self.buffered_line {
+                //     match self.cursor.x {
+                //         1 => {
+                //             self.segment
+                //                 .insert_at(current_line.line_number, &String::from("\n"));
+                //             self.display_segment();
+                //             self.motion(Motions::Down);
+                //         }
+                //         _ if self.cursor.x == current_line_len => {
+                //             logger::log_to_file(&format!("{:?}", &current_line));
+                //         }
+                //         _ => {
+                //             // Cursor is somewhere in the middle of the line
+                //         }
+                //     };
+                //     // // regenerate segment function, we need to only update segment partially,
+                //     // // eg remove last element, move pre last to the last, and
+                //     // // ? regenerate offset for each segment node
+                //     // // ? regenerate line number for each node
+                //     // // ? redraw lines below new line
+                //     return;
+                // }
             }
             c => {
                 let (first_pt, second_pt) = self.split_bl(usize::from(self.cursor.x - 1));
@@ -266,6 +281,8 @@ impl Buffer {
     }
 
     fn update_cur_line(&mut self) {
+        logger::log_to_file(&format!("{:?}", &self.segment));
+        logger::log_to_file(&format!("{:?}", &self.cursor));
         let new_line = self
             .segment
             .get_line(usize::from(self.cursor.absolute_y))

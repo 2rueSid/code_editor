@@ -5,7 +5,7 @@
 #### 1-st
 
     - Open text editor in terminal window
-    - Cursor behaivour
+    - Cursor behavior
     - Some keybindings
     - Open file
 
