@@ -224,24 +224,29 @@ impl Buffer {
                 let current_line = &self.current_line.clone().unwrap();
                 let current_line_len = self.get_ln_len(&current_line.value);
 
-                logger::log_to_file(&format!(
-                    "x: {} cl: {:?} cl_len: {}",
-                    self.cursor.x, current_line, current_line_len
-                ));
                 // no changes to the line above
                 if self.cursor.x == 1 {
                     self.segment
                         .insert_at(current_line.line_number, &String::from("\n"));
-                    self.display_segment();
-                    self.motion(Motions::Down);
                 } else if self.cursor.x == current_line_len {
                     self.segment
                         .insert_at(current_line.line_number + 1, &String::from("\n"));
-                    self.display_segment();
-                    self.motion(Motions::Down);
                 } else {
+                    let pt1 = &current_line.value[..(self.cursor.x - 1).into()];
+                    let pt2 = &current_line.value[(self.cursor.x - 1).into()..];
+
+                    self.segment
+                        .update_at(current_line.line_number, &format!("{}{}", pt1, "\n"));
+                    self.segment
+                        .insert_at(current_line.line_number + 1, &String::from(pt2));
+
+                    self.cursor.x = 1;
+                    self.cursor.vertical_x = 1;
                 }
 
+                self.display_segment();
+
+                self.motion(Motions::Down);
                 return;
                 //     // // regenerate segment function, we need to only update segment partially,
                 //     // // eg remove last element, move pre last to the last, and

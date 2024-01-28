@@ -53,15 +53,17 @@ impl Segment {
         }
     }
 
-    pub fn get_line_idx(&self, ln: usize) -> Result<usize, String> {
-        match self
-            .nodes
-            .binary_search_by(|node| node.line_number.cmp(&ln))
-        {
-            Ok(index) => Ok(index),
-            Err(_) => Err("Not Found".to_string()),
+    pub fn update_at(&mut self, ln: usize, val: &String) {
+        let idx = match self.get_line_idx(ln) {
+            Ok(i) => i,
+            Err(_) => return,
+        };
+
+        if let Some(node) = self.nodes.get_mut(idx) {
+            node.value = val.clone();
         }
     }
+
     pub fn insert_at(&mut self, ln: usize, new_node: &String) {
         let idx = self.get_line_idx(ln);
         if idx.is_err() {
@@ -139,5 +141,15 @@ impl Segment {
 
     pub fn pop_b(&mut self) {
         self.nodes.pop_back();
+    }
+
+    fn get_line_idx(&self, ln: usize) -> Result<usize, String> {
+        match self
+            .nodes
+            .binary_search_by(|node| node.line_number.cmp(&ln))
+        {
+            Ok(index) => Ok(index),
+            Err(_) => Err("Not Found".to_string()),
+        }
     }
 }
