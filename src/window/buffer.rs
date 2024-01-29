@@ -161,6 +161,8 @@ impl Buffer {
             self.buffered_line = ln.to_string();
         }
 
+        let current_line = &self.current_line.clone().unwrap();
+        let current_line_len = self.get_ln_len(&current_line.value);
         // handle changes in line
         match item {
             codes::BACKSPACE => {
@@ -221,8 +223,6 @@ impl Buffer {
                 // 3.4 regenerate segment
                 // 3.5 move cursor line below
                 // 3.6 return
-                let current_line = &self.current_line.clone().unwrap();
-                let current_line_len = self.get_ln_len(&current_line.value);
 
                 // no changes to the line above
                 if self.cursor.x == 1 {
@@ -248,29 +248,19 @@ impl Buffer {
 
                 self.motion(Motions::Down);
                 return;
-                //     // // regenerate segment function, we need to only update segment partially,
-                //     // // eg remove last element, move pre last to the last, and
-                //     // // ? regenerate offset for each segment node
-                //     // // ? regenerate line number for each node
-                //     // // ? redraw lines below new line
-                //     return;
-                // }
             }
             c => {
-                let (first_pt, second_pt) = self.split_bl(usize::from(self.cursor.x - 1));
-                self.buffered_line = format!("{}{}{}", first_pt, c, second_pt);
+                let pt1 = &current_line.value[..(self.cursor.x - 1).into()];
+                let pt2 = &current_line.value[(self.cursor.x - 1).into()..];
 
-                self.stdio.update_line(&self.buffered_line, &self.cursor);
+                let updated_ln = format!("{}{}{}", pt1, c, pt2);
+                self.stdio.update_line(&updated_ln, &self.cursor);
+                self.segment
+                    .update_at(current_line.line_number, &updated_ln);
+                self.update_cur_line();
                 self.cursor.move_right();
             }
         }
-    }
-
-    fn split_bl(&self, i: usize) -> (&str, &str) {
-        let first_pt = &self.buffered_line[..i];
-        let second_pt = &self.buffered_line[i..];
-
-        (first_pt, second_pt)
     }
 
     fn update_cur_line(&mut self) {

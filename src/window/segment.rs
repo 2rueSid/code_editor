@@ -61,6 +61,7 @@ impl Segment {
 
         if let Some(node) = self.nodes.get_mut(idx) {
             node.value = val.clone();
+            node.updated = true;
         }
     }
 
