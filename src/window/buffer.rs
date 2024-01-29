@@ -170,7 +170,31 @@ impl Buffer {
                     return;
                 }
 
-                if self.cursor.relative_y == 1 && self.cursor.x == 1 {}
+                if self.cursor.relative_y == 1 && self.cursor.x == 1 {
+                    return;
+                }
+
+                if (self.cursor.x as i16 - 2) < 0 {
+                    // end of the line
+                    logger::log_to_file(&format!("{:?} \n  {:?}", &self.cursor, &current_line));
+                    let prev_line = match self.segment.get_line(current_line.line_number - 1) {
+                        Ok(v) => v,
+                        Err(_) => return,
+                    };
+
+                    let mut merged_val = String::new();
+                    merged_val.push_str(&prev_line.value.clone());
+                    merged_val.pop();
+                    merged_val.push_str(&current_line.value.clone());
+
+                    self.segment
+                        .update_at(current_line.line_number - 1, &merged_val);
+
+                    self.cursor.move_up();
+                    self.stdio.update_line(&merged_val, &self.cursor);
+
+                    return;
+                }
 
                 let updated_ln = &mut current_line.value;
                 updated_ln.remove((self.cursor.x - 2).into());
@@ -180,41 +204,6 @@ impl Buffer {
                 self.stdio.update_line(&updated_ln, &self.cursor);
                 self.set_curr_line_value(&updated_ln);
                 self.motion(Motions::Left);
-                // if self.cursor.relative_y == 1 && self.cursor.x == 1 {
-                //     // fetch new line here
-                //     return;
-                // }
-                //
-                // if (self.cursor.x as i16 - 2) < 0 {
-                //     // if x is less than 0, merge with line y - 1
-                //     let prev_line = match self.segment.get_line(usize::from(self.cursor.absolute_y))
-                //     {
-                //         Ok(v) => v,
-                //         Err(_) => return,
-                //     };
-                //
-                //     let mut curr_line = self.buffered_line.clone();
-                //     let mut pl_value = prev_line.value.clone();
-                //
-                //     pl_value.pop();
-                //     curr_line.pop();
-                //     self.stdio.update_line(&String::from("\n"), &self.cursor);
-                //
-                //     self.cursor.x = self.get_ln_len(&pl_value);
-                //     self.cursor.move_up();
-                //
-                //     self.buffered_line = format!("{}{}\n", pl_value, curr_line);
-                //
-                //     self.stdio.update_line(&self.buffered_line, &self.cursor);
-                //
-                //     // perform deletion here
-                //
-                //     return;
-                // }
-                // self.buffered_line.remove(usize::from(self.cursor.x - 2));
-                //
-                // self.stdio.update_line(&self.buffered_line, &self.cursor);
-                // self.motion(Motions::Left);
             }
             codes::RETURN => {
                 // need to create a function that regenerates segment optimally eg only few nodes
