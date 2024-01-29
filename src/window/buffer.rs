@@ -161,7 +161,7 @@ impl Buffer {
             self.buffered_line = ln.to_string();
         }
 
-        let current_line = &self.current_line.clone().unwrap();
+        let mut current_line = self.current_line.clone().unwrap();
         let current_line_len = self.get_ln_len(&current_line.value);
         // handle changes in line
         match item {
@@ -170,61 +170,54 @@ impl Buffer {
                     return;
                 }
 
-                if self.cursor.relative_y == 1 && self.cursor.x == 1 {
-                    // fetch new line here
-                    return;
-                }
+                if self.cursor.relative_y == 1 && self.cursor.x == 1 {}
 
-                if (self.cursor.x as i16 - 2) < 0 {
-                    // if x is less than 0, merge with line y - 1
-                    let prev_line = match self.segment.get_line(usize::from(self.cursor.absolute_y))
-                    {
-                        Ok(v) => v,
-                        Err(_) => return,
-                    };
+                let updated_ln = &mut current_line.value;
+                updated_ln.remove((self.cursor.x - 2).into());
 
-                    let mut curr_line = self.buffered_line.clone();
-                    let mut pl_value = prev_line.value.clone();
-
-                    pl_value.pop();
-                    curr_line.pop();
-                    self.stdio.update_line(&String::from("\n"), &self.cursor);
-
-                    self.cursor.x = self.get_ln_len(&pl_value);
-                    self.cursor.move_up();
-
-                    self.buffered_line = format!("{}{}\n", pl_value, curr_line);
-
-                    self.stdio.update_line(&self.buffered_line, &self.cursor);
-
-                    // perform deletion here
-
-                    return;
-                }
-                self.buffered_line.remove(usize::from(self.cursor.x - 2));
-
-                self.stdio.update_line(&self.buffered_line, &self.cursor);
+                self.segment
+                    .update_at(current_line.line_number, &updated_ln);
+                self.stdio.update_line(&updated_ln, &self.cursor);
+                self.set_curr_line_value(&updated_ln);
                 self.motion(Motions::Left);
+                // if self.cursor.relative_y == 1 && self.cursor.x == 1 {
+                //     // fetch new line here
+                //     return;
+                // }
+                //
+                // if (self.cursor.x as i16 - 2) < 0 {
+                //     // if x is less than 0, merge with line y - 1
+                //     let prev_line = match self.segment.get_line(usize::from(self.cursor.absolute_y))
+                //     {
+                //         Ok(v) => v,
+                //         Err(_) => return,
+                //     };
+                //
+                //     let mut curr_line = self.buffered_line.clone();
+                //     let mut pl_value = prev_line.value.clone();
+                //
+                //     pl_value.pop();
+                //     curr_line.pop();
+                //     self.stdio.update_line(&String::from("\n"), &self.cursor);
+                //
+                //     self.cursor.x = self.get_ln_len(&pl_value);
+                //     self.cursor.move_up();
+                //
+                //     self.buffered_line = format!("{}{}\n", pl_value, curr_line);
+                //
+                //     self.stdio.update_line(&self.buffered_line, &self.cursor);
+                //
+                //     // perform deletion here
+                //
+                //     return;
+                // }
+                // self.buffered_line.remove(usize::from(self.cursor.x - 2));
+                //
+                // self.stdio.update_line(&self.buffered_line, &self.cursor);
+                // self.motion(Motions::Left);
             }
             codes::RETURN => {
                 // need to create a function that regenerates segment optimally eg only few nodes
-                // 1. check if current_line == buffered_line
-                // 2. if equals
-                // 2.1 create new line below
-                // 2.2 update buffered_line
-                // 2.3 insert new line into the piece table
-                // 2.4 regenerate segment
-                // 2.5 update cursor
-                // 2.6 return
-                // 3. else
-                // 3.1 calculate offset based on the current line and the buffered line
-                // 3.2 create new line below
-                // 3.3 insert updated line above and new line below together into the piece table
-                // 3.4 regenerate segment
-                // 3.5 move cursor line below
-                // 3.6 return
-
-                // no changes to the line above
                 if self.cursor.x == 1 {
                     self.segment
                         .insert_at(current_line.line_number, &String::from("\n"));
@@ -257,9 +250,15 @@ impl Buffer {
                 self.stdio.update_line(&updated_ln, &self.cursor);
                 self.segment
                     .update_at(current_line.line_number, &updated_ln);
-                self.update_cur_line();
+                self.set_curr_line_value(&updated_ln);
                 self.cursor.move_right();
             }
+        }
+    }
+
+    fn set_curr_line_value(&mut self, new_v: &String) {
+        if let Ok(ref mut l) = self.current_line {
+            l.value = new_v.to_string();
         }
     }
 
