@@ -26,9 +26,9 @@ pub struct Segment {
 }
 
 impl Segment {
-    pub fn new(cp: usize) -> Segment {
+    pub fn new() -> Segment {
         Segment {
-            nodes: VecDeque::with_capacity(cp),
+            nodes: VecDeque::new(),
         }
     }
 

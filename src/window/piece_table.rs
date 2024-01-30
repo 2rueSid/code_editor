@@ -1,21 +1,23 @@
 use crate::window::segment::Segment;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum Source {
     Original,
     Add,
 }
 
-struct Piece {
+#[derive(Debug)]
+pub struct Piece {
     source: Source,
     offset: usize,
     length: usize,
 }
 
+#[derive(Debug)]
 pub struct PieceTable {
     pub original: String,
     pub add: String,
-    pieces: Vec<Piece>,
+    pub pieces: Vec<Piece>,
 }
 
 impl PieceTable {
@@ -111,7 +113,7 @@ impl PieceTable {
     /// res as well.
     pub fn get_lines(&self, from: usize, to: usize) -> Segment {
         let mut current_line = 1;
-        let mut res = Segment::new(to - from + 1 as usize);
+        let mut res = Segment::new();
         let mut line_value = String::new();
         let mut current_offset = 0;
 
@@ -175,5 +177,21 @@ impl PieceTable {
                 segment.add_f(prev_line);
             }
         }
+    }
+
+    pub fn get_string(&self) -> String {
+        let mut res = String::new();
+        for piece in &self.pieces {
+            match piece.source {
+                Source::Original => {
+                    res.push_str(&self.original[piece.offset..piece.offset + piece.length]);
+                }
+                Source::Add => {
+                    res.push_str(&self.add[piece.offset..piece.offset + piece.length]);
+                }
+            }
+        }
+
+        res
     }
 }

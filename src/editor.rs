@@ -29,6 +29,9 @@ impl Editor {
 
             match evt {
                 Event::Key(Key::Ctrl('q')) => break,
+                Event::Key(Key::Ctrl('s')) => {
+                    buffer.save();
+                }
                 Event::Key(Key::Left) => buffer.motion(Motions::Left),
                 Event::Key(Key::Right) => buffer.motion(Motions::Right),
                 Event::Key(Key::Up) => buffer.motion(Motions::Up),

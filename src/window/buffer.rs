@@ -17,8 +17,6 @@ pub struct Buffer {
     pub cursor: Cursor,
     pub segment: Segment,
     current_line: Result<SegmentNode, String>,
-    char_items: Vec<char>,
-    buffered_line: String,
     file_path: std::path::PathBuf,
 }
 
@@ -52,8 +50,6 @@ impl Buffer {
             },
             segment: initial_segment,
             stdio,
-            char_items: Vec::new(),
-            buffered_line: String::new(),
             current_line,
         };
 
@@ -68,9 +64,10 @@ impl Buffer {
         buffer
     }
 
-    pub fn display_segment(&mut self) {
-        let text = self.segment.construct_segment();
-        self.stdio.display_segment(text);
+    pub fn save(&mut self) {
+        let data = self.data.get_string();
+
+        logger::log_to_file(&format!("{}", &data));
     }
 
     pub fn motion(&mut self, motion: Motions) {
@@ -152,14 +149,6 @@ impl Buffer {
         // both variants should react to \n to make an insertion.
         // when we handle a new line we need to write it as well, so when new line is created, we
         // need to shift front item from the buffer, and rearange buffer,
-        if self.buffered_line.is_empty() {
-            let ln = match &self.current_line {
-                Ok(v) => v.value.clone(),
-                Err(_) => String::new(),
-            };
-
-            self.buffered_line = ln.to_string();
-        }
 
         let mut current_line = self.current_line.clone().unwrap();
         let current_line_len = self.get_ln_len(&current_line.value);
@@ -222,12 +211,14 @@ impl Buffer {
                     self.segment
                         .insert_at(current_line.line_number + 1, &String::from(pt2));
 
+                    self.data
+                        .insert(&format!("{}{}{}", pt1, "\n", pt2), current_line.offset);
                     self.cursor.x = 1;
                     self.cursor.vertical_x = 1;
                 }
 
                 self.display_segment();
-
+                logger::log_to_file(&format!("{:?} \n\n {:?}", self.data.add, self.data.pieces));
                 self.motion(Motions::Down);
                 return;
             }
@@ -283,5 +274,12 @@ impl Buffer {
     fn display_motion(&mut self, x: u16) {
         self.stdio
             .goto_line((x, self.cursor.relative_y, self.cursor.absolute_y));
+    }
+
+    fn display_segment(&mut self) {
+        let text = self.segment.construct_segment();
+        logger::log_to_file(&format!("{}", &text));
+        self.stdio
+            .display_segment(text, (self.cursor.relative_y, self.cursor.x));
     }
 }

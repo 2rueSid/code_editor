@@ -73,9 +73,17 @@ impl Stdio {
         self.stdout.flush().unwrap();
     }
 
-    pub fn display_segment(&mut self, text: String) {
+    pub fn display_segment(&mut self, text: String, c: (u16, u16)) {
         self.stdout.suspend_raw_mode().unwrap();
-        write!(self.stdout, "{}{}", clear::All, text).unwrap();
+        write!(
+            self.stdout,
+            "{}{}{}{}",
+            termion::cursor::Goto(1, 1),
+            clear::All,
+            text,
+            termion::cursor::Goto(c.0, c.1)
+        )
+        .unwrap();
 
         self.stdout.flush().unwrap();
 
